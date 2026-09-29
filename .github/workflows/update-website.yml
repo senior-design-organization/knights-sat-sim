@@ -48,13 +48,14 @@ jobs:
           oauth-client-id: ${{ vars.TS_CLIENT_ID }}
           audience: ${{ vars.TS_AUDIENCE }}
           tags: tag:knightsat-deploy
-          ping: 100.108.206.107
+          ping: ${{ vars.DEPLOY_HOST }}
       - name: Update and verify the private origin
         env:
           SELECTED: ${{ inputs.revision }}
           GH_TOKEN: ${{ github.token }}
           DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           HOST_KEY: ${{ vars.DEPLOY_HOST_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
         run: |
           umask 077
           mkdir -p "$RUNNER_TEMP/knightsat-ssh"
@@ -68,7 +69,7 @@ jobs:
                           '-o', 'StrictHostKeyChecking=yes', '-o', 'BatchMode=yes',
                           '-o', 'ConnectTimeout=20', '-o', 'ServerAliveInterval=15',
                           '-o', 'ServerAliveCountMax=8', '-o', 'UserKnownHostsFile='+root+'known_hosts',
-                          'knightsat-deploy@100.108.206.107'],
+                          'knightsat-deploy@' + os.environ['DEPLOY_HOST']],
                          input=json.dumps({'revision': os.environ['SELECTED'],
                                            'token': os.environ['GH_TOKEN']})+'\n',
                          text=True, check=True, timeout=900)
