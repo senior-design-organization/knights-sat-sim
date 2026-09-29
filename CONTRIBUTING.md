@@ -63,7 +63,7 @@ For external setup without a code change, meet the ticket's acceptance checks, r
 
 ## Updating the shared website
 
-Merging code does not automatically update the hosted demo. The **Update website** workflow is manually triggered and currently accepts only the qualified placeholder build inputs. Player-session deployment remains blocked until atomic busy refusal and admission/maintenance integration are implemented. See the [deployment rules](docs/specs/backend-and-simulation.md#updating-the-hosted-demo). See the README operator runbook for setup and recovery.
+Merging to `main` runs CI, publishes tested images and automatically triggers **Update website** for that exact commit. The shared URL is an internal development environment: updates can interrupt teammate sessions, running programs and unsaved work. Check the **Update website** result and `/revision` to confirm delivery; a merged PR or successful dispatch alone does not prove deployment. The manual workflow remains available for retries. Production session-safe deployment is later work. See the [deployment rules](docs/specs/backend-and-simulation.md#updating-the-hosted-demo). See the README operator runbook for setup and recovery.
 
 ## Specs and language
 
