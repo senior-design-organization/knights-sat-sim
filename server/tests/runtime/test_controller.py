@@ -64,12 +64,8 @@ def test_create_isolated_runtime_and_remove_detached_children(controller):
         assert len(container.top()["Processes"]) >= 2
         await controller.destroy(clear_workspace=True)
         assert controller.current is None
-        assert (
-            controller.client.containers.list(
-                all=True, filters={"id": runtime.container_id}
-            )
-            == []
-        )
+        with pytest.raises(docker.errors.NotFound):
+            controller.client.containers.get(runtime.container_id)
         assert all(
             not list(path.iterdir()) for path in controller.storage.paths.values()
         )
@@ -234,12 +230,8 @@ def test_cancelled_creation_cannot_race_cleanup_or_block_event_loop(
                         except RuntimeFailure:
                             await asyncio.sleep(0.01)
         await controller.destroy(clear_workspace=True)
-        assert (
-            controller.client.containers.list(
-                all=True, filters={"id": runtime.container_id}
-            )
-            == []
-        )
+        with pytest.raises(docker.errors.NotFound):
+            controller.client.containers.get(runtime.container_id)
 
     asyncio.run(check())
 
@@ -978,8 +970,7 @@ def test_cancelled_destruction_keeps_slot_until_verified_retry(controller, monke
                             await asyncio.sleep(0.01)
         assert controller.current is None and not controller.failed
         assert not list(controller.storage.paths["authored"].iterdir())
-        assert not controller.client.containers.list(
-            all=True, filters={"id": runtime.container_id}
-        )
+        with pytest.raises(docker.errors.NotFound):
+            controller.client.containers.get(runtime.container_id)
 
     asyncio.run(check())
