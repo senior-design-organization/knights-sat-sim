@@ -759,6 +759,250 @@ def test_abandoned_execution_blocks_creation_and_storage_cleanup(controller):
         orphan.remove(force=True)
 
 
+def test_restart_reconciles_abandoned_execution_and_personal_storage(controller):
+    from api.runtime import DEPLOYMENT_LABEL, RuntimeFailure
+
+    async def check():
+        old = await controller.create(
+            workspace_id="old-workspace",
+            attempt_id="unfinished-attempt",
+            challenge_id="hello",
+            starters={"notes.txt": b"private work"},
+            resources={"connection.json": b"old credential"},
+        )
+        container = controller.client.containers.get(old.container_id)
+        detached = container.exec_run(
+            [
+                "python",
+                "-c",
+                "import subprocess; subprocess.Popen(['sleep','300'], "
+                "start_new_session=True, stdin=subprocess.DEVNULL, "
+                "stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)",
+            ],
+        )
+        assert detached.exit_code == 0
+        assert len(container.top()["Processes"]) >= 2
+        controller.terminal.close()
+        controller.terminal = None
+        restarted = RuntimeController(
+            controller.client, controller.storage, image=controller.image
+        )
+        foreign = controller.client.containers.create(
+            controller.image, labels={DEPLOYMENT_LABEL: "other-deployment"}
+        )
+        try:
+            probe = RuntimeController(
+                controller.client, controller.storage, image=controller.image
+            )
+            with pytest.raises(RuntimeFailure):
+                await probe.create(
+                    workspace_id="new",
+                    attempt_id="new",
+                    challenge_id="hello",
+                    starters={},
+                    resources={},
+                )
+            await restarted.reconcile()
+            with pytest.raises(docker.errors.NotFound):
+                controller.client.containers.get(old.container_id)
+            assert controller.client.containers.get(foreign.id)
+            assert all(
+                not list(path.iterdir()) for path in controller.storage.paths.values()
+            )
+            assert not restarted.failed
+        finally:
+            foreign.remove(force=True)
+            controller.current = None
+
+    asyncio.run(check())
+
+
+def test_api_startup_reconciles_before_health_and_obeys_maintenance(
+    controller, monkeypatch, tmp_path
+):
+    from fastapi.testclient import TestClient
+
+    from api.main import app
+
+    async def abandon():
+        runtime = await controller.create(
+            workspace_id="old",
+            attempt_id="unfinished",
+            challenge_id="hello",
+            starters={"notes.txt": b"old work"},
+            resources={"connection.json": b"old credential"},
+        )
+        controller.terminal.close()
+        controller.terminal = None
+        controller.current = None
+        return runtime
+
+    old = asyncio.run(abandon())
+    marker = tmp_path / "active"
+    monkeypatch.setenv("RUNTIME_IMAGE", controller.image)
+    monkeypatch.setenv("MAINTENANCE_MARKER", str(marker))
+    app.state.migrate = lambda: None  # KSAT-8 supplies this in the integrated app.
+    try:
+        marker.touch()
+        with TestClient(app) as browser:
+            assert browser.get("/health").status_code == 503
+            with pytest.raises(docker.errors.NotFound):
+                controller.client.containers.get(old.container_id)
+            assert all(
+                not list(path.iterdir()) for path in controller.storage.paths.values()
+            )
+            marker.unlink()
+            assert browser.get("/health").json() == {"status": "ok"}
+        del app.state.migrate
+        with TestClient(app) as browser:
+            assert browser.get("/health").status_code == 503
+    finally:
+        if hasattr(app.state, "migrate"):
+            del app.state.migrate
+        asyncio.run(controller.reconcile())
+
+
+def test_partial_creation_and_removal_failure_require_explicit_reconciliation(
+    controller, monkeypatch
+):
+    from api.runtime import RuntimeFailure
+
+    async def check():
+        create = controller.client.api.create_container
+
+        def lost_response(*args, **kwargs):
+            create(*args, **kwargs)
+            raise docker.errors.DockerException("lost response")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(controller.client.api, "create_container", lost_response)
+            with pytest.raises(RuntimeFailure):
+                await controller.create(
+                    workspace_id="w",
+                    attempt_id="a",
+                    challenge_id="hello",
+                    starters={"notes.txt": b"personal"},
+                    resources={},
+                )
+        old = controller.current
+        assert old and controller.client.containers.get(old.container_id)
+        controller.current = (
+            None  # Process died; new controller has no in-memory record.
+        )
+        restarted = RuntimeController(
+            controller.client, controller.storage, image=controller.image
+        )
+
+        def denied(*args, **kwargs):
+            raise docker.errors.DockerException("injected removal failure")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(controller.client.api, "remove_container", denied)
+            with pytest.raises(RuntimeFailure, match="retry reconciliation"):
+                await restarted.reconcile()
+        assert restarted.failed
+        assert controller.client.containers.get(old.container_id)
+        assert (controller.storage.paths["authored"] / "hello/notes.txt").exists()
+        await restarted.reconcile()
+        with pytest.raises(docker.errors.NotFound):
+            controller.client.containers.get(old.container_id)
+        assert all(
+            not list(path.iterdir()) for path in controller.storage.paths.values()
+        )
+        assert not restarted.failed
+
+    asyncio.run(check())
+
+
+def test_api_startup_removal_failure_keeps_health_closed_until_restart(
+    controller, monkeypatch, tmp_path
+):
+    from fastapi.testclient import TestClient
+
+    from api.main import app
+
+    async def abandon():
+        runtime = await controller.create(
+            workspace_id="old",
+            attempt_id="unfinished",
+            challenge_id="hello",
+            starters={"notes.txt": b"old work"},
+            resources={},
+        )
+        controller.terminal.close()
+        controller.terminal = None
+        controller.current = None
+        return runtime
+
+    old = asyncio.run(abandon())
+    monkeypatch.setenv("RUNTIME_IMAGE", controller.image)
+    monkeypatch.setenv("MAINTENANCE_MARKER", str(tmp_path / "active"))
+    app.state.migrate = lambda: None
+
+    def denied(*args, **kwargs):
+        raise docker.errors.DockerException("injected removal failure")
+
+    try:
+        with monkeypatch.context() as patch:
+            patch.setattr(docker.models.containers.Container, "remove", denied)
+            with TestClient(app) as browser:
+                assert browser.get("/health").status_code == 503
+                assert controller.client.containers.get(old.container_id)
+        with TestClient(app) as browser:
+            assert browser.get("/health").status_code == 200
+            with pytest.raises(docker.errors.NotFound):
+                controller.client.containers.get(old.container_id)
+        assert not list(controller.storage.paths["authored"].iterdir())
+    finally:
+        del app.state.migrate
+        asyncio.run(controller.reconcile())
+
+
+def test_orphanless_personal_storage_failure_stays_closed_until_retry(
+    controller, monkeypatch
+):
+    from api.runtime import RuntimeFailure
+
+    personal = controller.storage.paths["authored"] / "secret.txt"
+    personal.write_text("old work")
+    unlink = os.unlink
+
+    def denied(path, *args, **kwargs):
+        if str(path) == str(personal):
+            raise PermissionError("injected deletion failure")
+        return unlink(path, *args, **kwargs)
+
+    async def check():
+        with monkeypatch.context() as patch:
+            patch.setattr(os, "unlink", denied)
+            with pytest.raises(RuntimeFailure):
+                await controller.reconcile()
+        assert controller.failed and personal.read_text() == "old work"
+        await controller.reconcile()
+        assert not personal.exists() and not controller.failed
+
+    asyncio.run(check())
+
+
+def test_reconciliation_refuses_deployment_container_without_runtime_identity(
+    controller,
+):
+    from api.runtime import DEPLOYMENT_LABEL, RuntimeFailure
+
+    unknown = controller.client.containers.create(
+        controller.image, labels={DEPLOYMENT_LABEL: controller.storage.deployment}
+    )
+    try:
+        with pytest.raises(RuntimeFailure):
+            asyncio.run(controller.reconcile())
+        assert controller.client.containers.get(unknown.id)
+    finally:
+        try:
+            unknown.remove(force=True)
+        except docker.errors.NotFound:
+            pass
+
+
 def test_quota_failure_does_not_leave_a_partial_starter(controller):
     from api.runtime import RuntimeFailure
 

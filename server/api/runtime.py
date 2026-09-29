@@ -253,6 +253,44 @@ class RuntimeController:
         if clear_workspace:
             self.workspace_id = None
 
+    async def reconcile(self) -> None:
+        """Remove abandoned resources at startup, before readiness or admission."""
+        if self.current is not None:
+            raise RuntimeFailure("CLEANUP_FAILED", "Active runtime; use destroy")
+        try:
+            await self._worker(self._reconcile)
+        except asyncio.CancelledError:
+            self.failed = True
+            raise
+        except Exception as error:
+            self.failed = True
+            raise RuntimeFailure(
+                "CLEANUP_FAILED",
+                "Abandoned runtime cleanup failed; retry reconciliation",
+            ) from error
+        self.failed = False
+        self.workspace_id = None
+
+    def _reconcile(self) -> None:
+        containers = self.client.containers.list(
+            all=True, filters={"label": f"{DEPLOYMENT_LABEL}={self.storage.deployment}"}
+        )
+        for container in containers:
+            labels = container.labels
+            runtime_id = labels.get(RUNTIME_LABEL, "")
+            if (
+                labels.get(DEPLOYMENT_LABEL) != self.storage.deployment
+                or not re.fullmatch(r"[0-9a-f]{32}", runtime_id)
+                or not labels.get(WORKSPACE_LABEL)
+                or container.name != f"ksat-{runtime_id}"
+            ):
+                raise RuntimeError(
+                    "Unrecognized deployment container; refusing removal"
+                )
+        for container in containers:
+            container.remove(force=True)
+        self._clear_storage(("authored", "managed", "bridge"))
+
     def _destroy(self, clear_workspace: bool) -> None:
         if self.current is not None:
             try:
@@ -277,6 +315,13 @@ class RuntimeController:
             self.terminal.close()
             self.terminal = None
             self.terminal_exec_id = None
+        self._clear_storage(
+            ("authored", "managed", "bridge")
+            if clear_workspace
+            else ("managed", "bridge")
+        )
+
+    def _clear_storage(self, kinds: tuple[str, ...]) -> None:
         if self.client.containers.list(
             all=True, filters={"label": f"{DEPLOYMENT_LABEL}={self.storage.deployment}"}
         ):
@@ -284,11 +329,7 @@ class RuntimeController:
                 "Abandoned runtime present; reconcile before storage cleanup"
             )
         self._validate_storage()
-        for kind in (
-            ("authored", "managed", "bridge")
-            if clear_workspace
-            else ("managed", "bridge")
-        ):
+        for kind in kinds:
             for path in self.storage.paths[kind].iterdir():
                 if path.is_dir() and not path.is_symlink():
                     shutil.rmtree(path)
