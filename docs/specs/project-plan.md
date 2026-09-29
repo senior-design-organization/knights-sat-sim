@@ -67,7 +67,7 @@ Sydney Lalah and Lily MacInnis handle frontend work. Sydney also helps with the 
 
 Sydney and Kamilla work together on Challenge pages and saved progress. Lily and Denzel work together on the editor and terminal. The backend teammates coordinate with Diab to connect everything to the simulation. Kamilla leads database work, with help from Sydney.
 
-Everyone tests and documents their own work. We track tasks in the Knight Sat Sim (KSAT) Jira project, with one accountable owner per task. Request a non-author teammate's review when a pull request is ready; do not preassign a fixed reviewer. For external setup without a PR, another teammate verifies the recorded result when ready. RF hardware work comes later.
+Everyone tests and documents their own work. We track tasks in the Knight Sat Sim (KSAT) Jira project, with one accountable owner per task. Follow the [contribution review rules](../../CONTRIBUTING.md#planning-and-board), including Diab's authorization for his own merges; do not preassign a fixed reviewer. For external setup without a PR, another teammate verifies the recorded result when ready. RF hardware work comes later.
 
 ## How we’ll build it
 
