@@ -16,7 +16,7 @@ Start with the [project plan](docs/specs/project-plan.md) for scope, responsibil
 | `docs/specs/` | Current scope, architecture, behavior, and acceptance checks |
 | `docs/research/` | Supporting sources and technical findings |
 
-The repository currently contains a scaffold. Running it starts the frontend and backend health endpoint; it does not provide the planned Challenges, terminal, database behavior, or station lessons yet.
+Running the repository starts the workstation skeleton and backend health endpoint. You can browse Briefing previews and switch empty Workspace panels; playable Challenges, terminal execution, saved files and progress are not connected yet. UI contributors can use `/dev/components` in development; see the [workstation handoff](docs/specs/frontend.md#workstation-implementation-handoff-ksat-36).
 
 ## Run locally
 

@@ -1,6 +1,6 @@
 # Frontend
 
-This spec owns the shared UI foundation and browser conventions for the operations MVP. Start with the [project plan](project-plan.md). The foundation, behavior and implementation defaults below are agreed requirements. The current UI remains a scaffold.
+This spec owns the shared UI foundation and browser conventions for the operations MVP. Start with the [project plan](project-plan.md). The foundation, behavior and implementation defaults below are agreed requirements. The current UI provides the KSAT-36 workstation skeleton; catalogue, session and execution integration remain separate work.
 
 ## Shared UI foundation
 
@@ -93,3 +93,14 @@ These defaults carry the approved visual direction into a self-contained build r
 Use shared Button, Input, Label, Tabs, Dialog, AlertDialog, Select, Tooltip and Alert controls. Native tables render packet fields/history; CodeMirror and xterm own their specialist surfaces. Stop, Reset workspace and Reset demo progress use explicit destructive-action dialogs. Prefer inline status to toasts, CSS grid to a layout package, and native form state to an additional form library. Dark appearance only for MVP.
 
 Implementation references: [shadcn/ui for Vite](https://ui.shadcn.com/docs/installation/vite) and [CodeMirror](https://codemirror.net/docs/guide/).
+
+
+## Workstation implementation handoff (KSAT-36)
+
+- `ui/src/App.tsx` owns routes and the development-only, lazy-loaded `/dev/components` reference. The production build excludes its route, link and example code. Unknown routes and Challenge IDs show Not found.
+- `ui/src/Workstation.tsx` owns the persistent shell and dock. Its small Briefing list is display-only: it supplies no unlock, Attempt or completion state. Sydney’s KSAT-9 replaces it with the server catalogue/client; browsing remains separate from starting or switching an Attempt.
+- KSAT-12 mounts the Context/useReducer Attempt provider inside `Workstation`, around both routed content and persistent panels. No synthetic session reducer or connection is supplied here. Lily’s terminal/editor work belongs in the persistent dock; keep draft-bearing panels mounted. Label future live tools from the active Attempt, never from the viewed route.
+- Shared controls live in `ui/src/components/ui/`. `ui/components.json`, `ui/vite.config.ts` and `ui/src/styles.css` centralize the Base UI registry, build integration and dark tokens. System fonts, 4px spacing units, 6px corners and the specified desktop columns are used.
+- Run `npm run dev` from `ui/` and visit `/dev/components` for labelled form controls, persistent errors, tabs, dialogs, confirmation and tooltips. Base UI tabs use arrows for focus and Enter/Space for selection. Import these controls in feature screens rather than implementing replacements.
+
+Verification on 2026-09-29: Google Chrome 154.0.8037.92 on macOS, using Playwright. Checked 1280px and 1600px layouts, 1000px width notice/horizontal scrolling, persistent dock and selected tab through route changes and Back/Forward, keyboard tabs/select, and dialog Escape/focus return. Empty panels report unavailable session, telemetry, command-delivery and progress services. Vitest covers route/dock persistence, unknown Challenges and example form/confirmation behavior. Production preview rejects `/dev/components`, and its bundle contains no example page. These are skeleton checks, not evidence for real session or Sim behavior.
