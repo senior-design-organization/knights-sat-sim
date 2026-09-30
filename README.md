@@ -1,55 +1,40 @@
 # Knight Sat Sim
 
-A **Platform** for practicing satellite cybersecurity and learning ground-station operation, including the station at UCF’s Physical Sciences Building (PSB). **Players** practice with simulated systems and learn the equipment and workflow used at PSB.
+A UCF Senior Design project for practicing satellite communication in a browser. The satellite and ground station are simulated; no real equipment is connected.
 
-This repository is **Knight Sat Sim (KSS)**, the UCF CS Senior Design implementation of that Platform. The product has three tracks: **Basic operations**, **Offensive**, and **Defensive**. The first version to build (MVP) focuses on **three Basic operations Challenges**, **Hello, Satellite!**, **Ready for the Pass**, and **Catch and Log**. Completion is based on performing the tasks, without submitting Flags. The specs define the agreed learning flow and implementation defaults. Offensive and Defensive Challenges come later. Practice remains browser-based, without live station-hardware integration. See the [ground-station training plan](docs/specs/ground-station-training.md).
+## Stack
 
-Start with the [project plan](docs/specs/project-plan.md) for scope, responsibilities, progression, and completion checks. Its [build specifications](docs/specs/project-plan.md#build-specifications) table links to the implementation and learning documents. Each spec owns its decisions; research provides supporting sources, not additional MVP requirements.
-
-## Repository layout
-
-| Path | Contents |
-| --- | --- |
-| `server/sim/` | Sim Service, packet handling, Ground Sim, and Software Link |
-| `server/api/` | FastAPI Web Backend |
-| `ui/` | React and TypeScript frontend |
-| `docs/specs/` | Current scope, architecture, behavior, and acceptance checks |
-| `docs/research/` | Supporting sources and technical findings |
-
-Running the repository starts the workstation skeleton and backend health endpoint. You can browse Briefing previews and switch empty Workspace panels; playable Challenges, terminal execution, saved files and progress are not connected yet. UI contributors can use `/dev/components` in development; see the [workstation handoff](docs/specs/frontend.md#workstation-implementation-handoff-ksat-36).
+- React, TypeScript, and Vite for the browser UI
+- Python 3.12 and FastAPI for the server
+- SQLite for shared progress
+- Docker Compose for local development
 
 ## Run locally
 
-You need Docker. From the repository root:
+### Dependencies
+
+- Git and a code editor
+- Docker Desktop, or Docker Engine with the Compose plugin on Linux
+- Google Chrome for browser checks
+- [KSAT Jira board](https://seniordesign-g20.atlassian.net/jira/software/projects/KSAT/boards/1) access and GitHub write access to contribute; cloning the public repository needs neither
+
+### Quick start
 
 ```bash
+git clone https://github.com/senior-design-organization/knights-sat-sim.git
+cd knights-sat-sim
 docker compose up --build
 ```
 
-- Browser UI: http://localhost:5173
-- Web Backend health check: http://localhost:8000/health
+- UI: [http://localhost:5173](http://localhost:5173) — opens the workstation with Briefing previews and empty Workspace panels.
+- Server: [http://localhost:8000/health](http://localhost:8000/health) — returns `{"status":"ok"}`.
 
-Compose starts the React development server and **one** Python process that will contain FastAPI and the Sim Service. The `sqlite-data` volume is reserved for the planned SQLite progress database. Do not run extra server workers: the MVP Attempt lives in memory in that single process.
+Docker installs the application dependencies; local setup needs no `.env` file or private server keys. Stop with **Ctrl+C**, then run `docker compose down` (without `-v`, which deletes local data). For native setup and test commands, see [Development](docs/development.md).
 
-Without Docker:
+Playable Challenges, terminal execution, saved files and progress are not connected yet. UI contributors can use `/dev/components` in development; see the [workstation handoff](docs/specs/frontend.md#workstation-implementation-handoff-ksat-36).
 
-- Server: Python 3.12+, from `server/`: `uv sync` then `uv run uvicorn api.main:app --reload --host 0.0.0.0 --port 8000` (still one worker).
-- UI: Node 22+, from `ui/`: `npm install` then `npm run dev`.
+## Work on a ticket
 
-## Tests and lint
-
-```bash
-# server
-cd server && uv sync --extra dev && uv run ruff check . && uv run pytest
-
-# ui
-cd ui && npm ci && npm run lint && npm test
-```
-
-Pull requests run the same checks in GitHub Actions.
-
-## How we work
-
-Jira holds build tickets. Open a branch named with the Jira key, open a pull request whose title starts with that key, wait for CI, and get one teammate review before merge. Details: [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-
+1. On the [Jira board](https://seniordesign-g20.atlassian.net/jira/software/projects/KSAT/boards/1), take a **Ready** ticket assigned to you. Its prerequisites, starting point, and acceptance checks determine what to build. Ticket numbers are not an implementation order. If none is assigned, ask Diab which ticket to take next.
+2. Start with the [project plan](docs/specs/project-plan.md), then read the specification sections linked by your ticket. Use the [glossary](docs/glossary.md) for project terms.
+3. Follow [Contributing](CONTRIBUTING.md) for the branch, local checks, pull request, review, merge, and website check. Work on one ticket at a time; do not code directly on `main`.
