@@ -159,15 +159,6 @@ export function Workstation() {
             )}
           </div>
         </aside>
-        <main id="main-content" className="guide-pane" tabIndex={-1}>
-          <div className="pane-heading">
-            <h2>Challenge guide</h2>
-            <span>Browse & learn</span>
-          </div>
-          <div className="page-content">
-            <Outlet />
-          </div>
-        </main>
         <section className="workspace-pane" aria-label="Workspace pane">
           <div className="pane-heading">
             <h2>Workspace</h2>
@@ -221,6 +212,15 @@ export function Workstation() {
             <p>No session connected. Telemetry is unavailable.</p>
           </section>
         </section>
+        <main id="main-content" className="guide-pane" tabIndex={-1}>
+          <div className="pane-heading">
+            <h2>Challenge guide</h2>
+            <span>Browse & learn</span>
+          </div>
+          <div className="page-content">
+            <Outlet />
+          </div>
+        </main>
         <footer
           className="status-bar"
           aria-label="Connection and command status"
