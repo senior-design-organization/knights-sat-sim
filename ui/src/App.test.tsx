@@ -13,7 +13,7 @@ afterEach(cleanup);
 beforeEach(() => window.history.replaceState(null, "", "/"));
 
 describe("workstation", () => {
-  it("browses Challenge briefings without replacing the dock or starting an Attempt", async () => {
+  it("browses Challenge briefings without replacing the workspace or starting an Attempt", async () => {
     render(<App />);
     expect(
       await screen.findByRole("heading", {
@@ -21,7 +21,7 @@ describe("workstation", () => {
         level: 1,
       }),
     ).toBeInTheDocument();
-    const dock = screen.getByRole("region", { name: "Workspace dock" });
+    const workspace = screen.getByRole("region", { name: "Workspace pane" });
     fireEvent.click(screen.getByRole("tab", { name: "Notes" }));
     fireEvent.click(screen.getByRole("link", { name: /Ready for the Pass/ }));
     expect(
@@ -30,7 +30,9 @@ describe("workstation", () => {
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Workspace dock" })).toBe(dock);
+    expect(screen.getByRole("region", { name: "Workspace pane" })).toBe(
+      workspace,
+    );
     expect(screen.getByRole("tab", { name: "Notes" })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -50,7 +52,9 @@ describe("workstation", () => {
         level: 1,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Workspace dock" })).toBe(dock);
+    expect(screen.getByRole("region", { name: "Workspace pane" })).toBe(
+      workspace,
+    );
     expect(screen.getByRole("tab", { name: "Notes" })).toHaveAttribute(
       "aria-selected",
       "true",

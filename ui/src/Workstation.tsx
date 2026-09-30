@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useMatch, useParams } from "react-router";
+import { Link, NavLink, Outlet, useParams } from "react-router";
 import {
   BookOpen,
   FileCode,
@@ -55,19 +55,24 @@ export function ChallengePage() {
           not connected.
         </AlertDescription>
       </Alert>
+      <section className="guide-section" aria-labelledby="briefing-title">
+        <h2 id="briefing-title">Briefing</h2>
+        <p>{challenge.description}</p>
+      </section>
+      <section className="guide-section" aria-labelledby="completion-title">
+        <h2 id="completion-title">Task completion</h2>
+        <p>Shared progress has not been loaded. No completion is reported.</p>
+      </section>
+      <section className="guide-section" aria-labelledby="debrief-title">
+        <h2 id="debrief-title">Debrief</h2>
+        <p>A Debrief will follow verified and saved completion.</p>
+      </section>
       <section className="context-map" aria-labelledby="map-title">
         <Orbit className="size-12 text-muted-foreground" aria-hidden="true" />
         <h2 id="map-title">Mission context</h2>
         <p>
           A contextual map will appear here. No live position or pass data is
           available.
-        </p>
-      </section>
-      <section className="exercise-placeholder" aria-labelledby="tools-title">
-        <h2 id="tools-title">Challenge tools</h2>
-        <p>
-          Tools will be available with an active Attempt. Browsing a Briefing
-          does not start one.
         </p>
       </section>
     </article>
@@ -90,8 +95,6 @@ export function NotFound() {
 // Route content is viewed content only; runtime, drafts and live tools belong
 // to this persistent shell and must use the authoritative active Attempt.
 export function Workstation() {
-  const match = useMatch("/challenges/:challenge_id");
-  const viewed = challenges.find(({ id }) => id === match?.params.challenge_id);
   return (
     <div className="app-frame">
       <a className="skip-link" href="#main-content">
@@ -111,120 +114,113 @@ export function Workstation() {
           <span className="simulation-label">Simulation only</span>
         </header>
         <aside className="left-rail" aria-label="Navigation and files">
-          <nav aria-label="Challenges">
-            <h2 className="eyebrow">Basic operations</h2>
-            <p className="rail-caption">Browse Briefings</p>
-            {challenges.map((challenge, index) => (
-              <NavLink
-                key={challenge.id}
-                to={`/challenges/${challenge.id}`}
-                className="challenge-link"
-              >
-                <span className="challenge-number" aria-hidden="true">
-                  0{index + 1}
-                </span>
-                <span>{challenge.title}</span>
-              </NavLink>
-            ))}
-            <div className="later-track">
-              <span>Offensive</span>
-              <span>Coming later</span>
-            </div>
-            <div className="later-track">
-              <span>Defensive</span>
-              <span>Coming later</span>
-            </div>
-          </nav>
-          <section className="files-placeholder" aria-labelledby="files-title">
-            <h2 id="files-title">
-              <Folder aria-hidden="true" />
-              Workspace files
-            </h2>
-            <p>No Workspace is connected.</p>
-          </section>
-          {import.meta.env.DEV && (
-            <Link className="developer-link" to="/dev/components">
-              Component examples
-            </Link>
-          )}
+          <div className="pane-heading">
+            <h2>Challenges</h2>
+          </div>
+          <div className="navigation-content">
+            <nav aria-label="Challenges">
+              <h2 className="eyebrow">Basic operations</h2>
+              <p className="rail-caption">Browse Briefings</p>
+              {challenges.map((challenge, index) => (
+                <NavLink
+                  key={challenge.id}
+                  to={`/challenges/${challenge.id}`}
+                  className="challenge-link"
+                >
+                  <span className="challenge-number" aria-hidden="true">
+                    0{index + 1}
+                  </span>
+                  <span>{challenge.title}</span>
+                </NavLink>
+              ))}
+              <div className="later-track">
+                <span>Offensive</span>
+                <span>Coming later</span>
+              </div>
+              <div className="later-track">
+                <span>Defensive</span>
+                <span>Coming later</span>
+              </div>
+            </nav>
+            <section
+              className="files-placeholder"
+              aria-labelledby="files-title"
+            >
+              <h2 id="files-title">
+                <Folder aria-hidden="true" />
+                Workspace files
+              </h2>
+              <p>No Workspace is connected.</p>
+            </section>
+            {import.meta.env.DEV && (
+              <Link className="developer-link" to="/dev/components">
+                Component examples
+              </Link>
+            )}
+          </div>
         </aside>
-        <main id="main-content" className="work-area" tabIndex={-1}>
+        <main id="main-content" className="guide-pane" tabIndex={-1}>
+          <div className="pane-heading">
+            <h2>Challenge guide</h2>
+            <span>Browse & learn</span>
+          </div>
           <div className="page-content">
             <Outlet />
           </div>
-          <section className="workspace-dock" aria-label="Workspace dock">
-            <div className="dock-heading">
-              <h2>Workspace</h2>
-              <span>No active Attempt</span>
-            </div>
-            <Tabs defaultValue="terminal">
-              <TabsList aria-label="Workspace panels" variant="line">
-                <TabsTrigger value="terminal">
-                  <Terminal aria-hidden="true" />
-                  Terminal
-                </TabsTrigger>
-                <TabsTrigger value="editor">
-                  <FileCode aria-hidden="true" />
-                  Editor
-                </TabsTrigger>
-                <TabsTrigger value="notes">
-                  <BookOpen aria-hidden="true" />
-                  Notes
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="terminal" keepMounted>
-                <div className="dock-empty">
-                  <Terminal aria-hidden="true" />
-                  <h3>Terminal not connected</h3>
-                  <p>
-                    No shell is running. Terminal access will be available with
-                    a session.
-                  </p>
-                </div>
-              </TabsContent>
-              <TabsContent value="editor" keepMounted>
-                <div className="dock-empty">
-                  <FileCode aria-hidden="true" />
-                  <h3>No file open</h3>
-                  <p>The editor will share saved files with the terminal.</p>
-                </div>
-              </TabsContent>
-              <TabsContent value="notes" keepMounted>
-                <div className="dock-empty">
-                  <BookOpen aria-hidden="true" />
-                  <h3>Notes not available yet</h3>
-                  <p>Session notes will be saved in your Workspace.</p>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </section>
         </main>
-        <aside className="inspector" aria-label="Briefing and session details">
-          <section>
-            <h2>Briefing</h2>
-            <p className="inspector-label">
-              {viewed?.title ?? "No Challenge selected"}
-            </p>
-            <p>
-              {viewed?.description ??
-                "Choose a Challenge to read its Briefing."}
-            </p>
-          </section>
-          <section>
-            <h2>Satellite Sim state</h2>
+        <section className="workspace-pane" aria-label="Workspace pane">
+          <div className="pane-heading">
+            <h2>Workspace</h2>
+            <span>No active Attempt</span>
+          </div>
+          <Tabs className="workspace-tabs" defaultValue="terminal">
+            <TabsList aria-label="Workspace panels" variant="line">
+              <TabsTrigger value="terminal">
+                <Terminal aria-hidden="true" />
+                Terminal
+              </TabsTrigger>
+              <TabsTrigger value="editor">
+                <FileCode aria-hidden="true" />
+                Editor
+              </TabsTrigger>
+              <TabsTrigger value="notes">
+                <BookOpen aria-hidden="true" />
+                Notes
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="terminal" keepMounted>
+              <div className="workspace-empty">
+                <Terminal aria-hidden="true" />
+                <h3>Terminal not connected</h3>
+                <p>
+                  No shell is running. Terminal access will be available with a
+                  session.
+                </p>
+              </div>
+            </TabsContent>
+            <TabsContent value="editor" keepMounted>
+              <div className="workspace-empty">
+                <FileCode aria-hidden="true" />
+                <h3>No file open</h3>
+                <p>The editor will share saved files with the terminal.</p>
+              </div>
+            </TabsContent>
+            <TabsContent value="notes" keepMounted>
+              <div className="workspace-empty">
+                <BookOpen aria-hidden="true" />
+                <h3>Notes not available yet</h3>
+                <p>Session notes will be saved in your Workspace.</p>
+              </div>
+            </TabsContent>
+          </Tabs>
+          <section
+            className="session-details"
+            aria-labelledby="sim-state-title"
+          >
+            <h2 id="sim-state-title">Satellite Sim state</h2>
             <p>No session connected. Telemetry is unavailable.</p>
           </section>
-          <section>
-            <h2>Task completion</h2>
-            <p>
-              Shared progress has not been loaded. No completion is reported.
-            </p>
-          </section>
-          <section>
-            <h2>Debrief</h2>
-            <p>A Debrief will follow verified and saved completion.</p>
-          </section>
-        </aside>
+        </section>
         <footer
           className="status-bar"
           aria-label="Connection and command status"
